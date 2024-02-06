@@ -6,6 +6,8 @@ require (
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pglogrepl v0.0.0-20231111135425-1627ab1b5780 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.5.3 // indirect
