@@ -6,22 +6,22 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apache/arrow/go/v14/arrow"
+	"github.com/apache/arrow/go/v15/arrow"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 )
 
 type Wal2JsonChange struct {
-	Action string       `json:"action"`
+	Kind   string       `json:"action"`
 	Schema string       `json:"schema"`
 	Table  string       `json:"table"`
-	Data   arrow.Record `json:"data"`
+	Row    arrow.Record `json:"data"`
 }
 
 type Wal2JsonChanges struct {
-	Lsn     string           `json:"lsn"`
-	Changes []Wal2JsonChange `json:"changes"`
+	Lsn     string
+	Changes []Wal2JsonChange `json:"change"`
 }
 
 type Snapshotter struct {
