@@ -1,6 +1,6 @@
 package helpers
 
-import "github.com/apache/arrow/go/v14/arrow"
+import "github.com/apache/arrow/go/v15/arrow"
 
 func MapPlainTypeToArrow(fieldType string) arrow.DataType {
 	switch fieldType {
