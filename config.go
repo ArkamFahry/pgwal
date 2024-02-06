@@ -26,7 +26,7 @@ type Config struct {
 	DatabaseName               string    `json:"database_name" mapstructure:"database_name"`
 	DatabaseSchema             string    `json:"database_schema" mapstructure:"database_schema"`
 	DatabaseTables             []Table   `json:"database_tables" mapstructure:"database_tables"`
-	ReplicationSlot            string    `json:"replication_slot" mapstructure:"replication_slot"`
+	ReplicationSlotName        string    `json:"replication_slot_name" mapstructure:"replication_slot_name"`
 	TlsVerify                  TlsVerify `json:"tls_verify" mapstructure:"tls_verify"`
 	StreamOldData              bool      `json:"stream_old_data" mapstructure:"stream_old_data"`
 	SeparateChanges            bool      `json:"separate_changes" mapstructure:"separate_changes"`
