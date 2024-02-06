@@ -19,17 +19,17 @@ type Table struct {
 }
 
 type Config struct {
-	DatabaseHost      string    `json:"database_host" mapstructure:"database_host"`
-	DatabasePort      string    `json:"database_port" mapstructure:"database_port"`
-	DatabaseUser      string    `json:"database_user" mapstructure:"database_user"`
-	DatabasePassword  string    `json:"database_password" mapstructure:"database_password"`
-	DatabaseName      string    `json:"database_name" mapstructure:"database_name"`
-	DatabaseSchema    string    `json:"database_schema" mapstructure:"database_schema"`
-	DatabaseTables    []Table   `json:"database_tables" mapstructure:"database_tables"`
-	ReplicationSlot   string    `json:"replication_slot" mapstructure:"replication_slot"`
-	TlsVerify         TlsVerify `json:"tls_verify" mapstructure:"tls_verify"`
-	StreamOldData     bool      `json:"stream_old_data" mapstructure:"stream_old_data"`
-	SeparateChanges   bool      `json:"separate_changes" mapstructure:"separate_changes"`
-	SnapshotMaxMemory string    `json:"snapshot_max_memory" mapstructure:"snapshot_max_memory"`
-	BatchSize         int       `json:"batch_size" mapstructure:"batch_size"`
+	DatabaseHost               string    `json:"database_host" mapstructure:"database_host"`
+	DatabasePort               string    `json:"database_port" mapstructure:"database_port"`
+	DatabaseUser               string    `json:"database_user" mapstructure:"database_user"`
+	DatabasePassword           string    `json:"database_password" mapstructure:"database_password"`
+	DatabaseName               string    `json:"database_name" mapstructure:"database_name"`
+	DatabaseSchema             string    `json:"database_schema" mapstructure:"database_schema"`
+	DatabaseTables             []Table   `json:"database_tables" mapstructure:"database_tables"`
+	ReplicationSlot            string    `json:"replication_slot" mapstructure:"replication_slot"`
+	TlsVerify                  TlsVerify `json:"tls_verify" mapstructure:"tls_verify"`
+	StreamOldData              bool      `json:"stream_old_data" mapstructure:"stream_old_data"`
+	SeparateChanges            bool      `json:"separate_changes" mapstructure:"separate_changes"`
+	SnapshotMemorySafetyFactor float64   `json:"snapshot_memory_safety_factor" mapstructure:"snapshot_memory_safety_factor"`
+	BatchSize                  int       `json:"batch_size" mapstructure:"batch_size"`
 }
