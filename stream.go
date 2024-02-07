@@ -296,12 +296,16 @@ func (s *Stream) processSnapshot() {
 		os.Exit(1)
 	}
 	defer func() {
-		snapshotter.ReleaseSnapshot()
-		snapshotter.CloseConn()
+		if err = snapshotter.ReleaseSnapshot(); err != nil {
+			s.logger.Error("failed to release database snapshot", zap.Error(err))
+		}
+		if err = snapshotter.CloseConn(); err != nil {
+			s.logger.Error("failed to close database snapshot connection", zap.Error(err))
+		}
 	}()
 
 	for _, table := range s.tableSchemas {
-		s.logger.Info("Processing database snapshot", zap.String("schema", s.schema), zap.Any("table", table))
+		s.logger.Info("processing database snapshot", zap.String("schema", s.schema), zap.Any("table", table))
 
 		var offset = 0
 
@@ -403,7 +407,9 @@ func (s *Stream) cleanUpOnFailure() {
 	if err != nil {
 		s.logger.Error("failed to drop replication slot", zap.Error(err))
 	}
-	s.pgConn.Close(context.TODO())
+	if err = s.pgConn.Close(context.TODO()); err != nil {
+		s.logger.Error("failed to close database connection", zap.Error(err))
+	}
 }
 
 func (s *Stream) getPrimaryKeyColumn(tableName string) (string, error) {
