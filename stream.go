@@ -3,6 +3,7 @@ package pgstream
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"github.com/ArkamFahry/pgstream/internal/helpers"
 	"github.com/ArkamFahry/pgstream/internal/replication"
@@ -34,8 +35,8 @@ type Stream struct {
 	clientXLogPos              pglogrepl.LSN
 	standbyMessageTimeout      time.Duration
 	nextStandbyMessageDeadline time.Time
-	messages                   chan replication.Wal2JsonChanges
-	snapshotMessages           chan replication.Wal2JsonChanges
+	messages                   chan []byte
+	snapshotMessages           chan []byte
 	snapshotName               string
 	changeFilter               replication.ChangeFilter
 	lsnrestart                 pglogrepl.LSN
@@ -97,8 +98,8 @@ func NewStream(config Config, logger zap.Logger, checkPointer CheckPointer) (*St
 		pgConn:                     dbConn,
 		pgConfig:                   *cfg,
 		checkPointer:               checkPointer,
-		messages:                   make(chan replication.Wal2JsonChanges),
-		snapshotMessages:           make(chan replication.Wal2JsonChanges, 100),
+		messages:                   make(chan []byte),
+		snapshotMessages:           make(chan []byte, 100),
 		slotName:                   config.ReplicationSlotName,
 		schema:                     config.DatabaseSchema,
 		tableSchemas:               dataSchemas,
@@ -304,7 +305,7 @@ func (s *Stream) streamMessagesAsync() {
 					}
 				}
 
-				s.changeFilter.FilterChange(clientXLogPos.String(), xld.WALData, func(change replication.Wal2JsonChanges) {
+				s.changeFilter.FilterChange(clientXLogPos.String(), xld.WALData, func(change []byte) {
 					s.messages <- change
 				})
 			}
@@ -389,7 +390,12 @@ func (s *Stream) processSnapshot() {
 					},
 				}
 
-				s.snapshotMessages <- snapshotChanges
+				snapshotMessage, err := json.Marshal(snapshotChanges)
+				if err != nil {
+					s.logger.Error("failed to marshal snapshot change", zap.Error(err))
+				}
+
+				s.snapshotMessages <- snapshotMessage
 			}
 
 			snapshotRows.Close()
@@ -420,21 +426,23 @@ func (s *Stream) OnMessage(callback OnMessage) {
 	}
 }
 
-func (s *Stream) SnapshotMessageC() chan replication.Wal2JsonChanges {
+func (s *Stream) SnapshotMessageC() chan []byte {
 	return s.snapshotMessages
 }
 
-func (s *Stream) LrMessageC() chan replication.Wal2JsonChanges {
+func (s *Stream) LrMessageC() chan []byte {
 	return s.messages
 }
 
 // cleanUpOnFailure drops replication slot and publication if database snapshotting was failed for any reason
 func (s *Stream) cleanUpOnFailure() {
 	s.logger.Warn("cleaning up replication slot and resources on accident.", zap.String("replication_slot", s.slotName))
+
 	err := replication.DropReplicationSlot(context.Background(), s.pgConn, s.slotName, replication.DropReplicationSlotOptions{Wait: true})
 	if err != nil {
 		s.logger.Error("failed to drop replication slot", zap.Error(err))
 	}
+
 	if err = s.pgConn.Close(context.TODO()); err != nil {
 		s.logger.Error("failed to close database connection", zap.Error(err))
 	}

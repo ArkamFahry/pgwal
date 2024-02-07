@@ -32,7 +32,7 @@ func NewChangeFilter(tableSchemas []schemas.DataTableSchema, schema string) Chan
 	}
 }
 
-func (c ChangeFilter) FilterChange(lsn string, change []byte, OnFiltered Filtered) {
+func (c ChangeFilter) FilterChange(lsn string, change []byte, OnFiltered func(change []byte)) {
 	var changes WallMessage
 	if err := json.NewDecoder(bytes.NewReader(change)).Decode(&changes); err != nil {
 		panic(fmt.Errorf("cant parse change from database to filter it %v", err))
@@ -91,6 +91,8 @@ func (c ChangeFilter) FilterChange(lsn string, change []byte, OnFiltered Filtere
 			Row:    builder.NewRecord(),
 		})
 
-		OnFiltered(filteredChanges)
+		rawFilteredChanges, _ := json.Marshal(filteredChanges)
+
+		OnFiltered(rawFilteredChanges)
 	}
 }
