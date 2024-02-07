@@ -20,7 +20,7 @@ type Table struct {
 
 type Config struct {
 	DatabaseHost               string    `json:"database_host" mapstructure:"database_host"`
-	DatabasePort               string    `json:"database_port" mapstructure:"database_port"`
+	DatabasePort               int       `json:"database_port" mapstructure:"database_port"`
 	DatabaseUser               string    `json:"database_user" mapstructure:"database_user"`
 	DatabasePassword           string    `json:"database_password" mapstructure:"database_password"`
 	DatabaseName               string    `json:"database_name" mapstructure:"database_name"`
