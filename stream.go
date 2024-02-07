@@ -28,6 +28,7 @@ var pluginArguments = []string{"\"pretty-print\" 'true'"}
 type Stream struct {
 	pgConn                     *pgconn.PgConn
 	pgConfig                   pgconn.Config
+	checkPointer               CheckPointer
 	ctx                        context.Context
 	cancel                     context.CancelFunc
 	clientXLogPos              pglogrepl.LSN
@@ -48,7 +49,7 @@ type Stream struct {
 	logger                     *zap.Logger
 }
 
-func NewStream(config Config, logger *zap.Logger) (*Stream, error) {
+func NewStream(config Config, logger zap.Logger, checkPointer CheckPointer) (*Stream, error) {
 	var (
 		cfg *pgconn.Config
 		err error
@@ -95,6 +96,7 @@ func NewStream(config Config, logger *zap.Logger) (*Stream, error) {
 	stream := &Stream{
 		pgConn:                     dbConn,
 		pgConfig:                   *cfg,
+		checkPointer:               checkPointer,
 		messages:                   make(chan replication.Wal2JsonChanges),
 		snapshotMessages:           make(chan replication.Wal2JsonChanges, 100),
 		slotName:                   config.ReplicationSlotName,
@@ -105,7 +107,7 @@ func NewStream(config Config, logger *zap.Logger) (*Stream, error) {
 		snapshotBatchSize:          config.BatchSize,
 		tableNames:                 tableNames,
 		changeFilter:               replication.NewChangeFilter(dataSchemas, config.DatabaseSchema),
-		logger:                     logger,
+		logger:                     &logger,
 	}
 
 	result := stream.pgConn.Exec(context.Background(), fmt.Sprintf("DROP PUBLICATION IF EXISTS pglog_stream_%s;", config.ReplicationSlotName))
@@ -158,6 +160,16 @@ func NewStream(config Config, logger *zap.Logger) (*Stream, error) {
 			slotCheckRow := slotCheckResults[0].Rows[0]
 			confirmedLSNFromDB = string(slotCheckRow[0])
 			stream.logger.Info("replication slot restart LSN extracted from DB", zap.String("LSN", confirmedLSNFromDB))
+
+			if stream.checkPointer != nil {
+				lsnFromStorage := stream.checkPointer.GetCheckpoint(config.ReplicationSlotName)
+				if lsnFromStorage != "" {
+					stream.logger.Info("replication slot restart LSN extracted from storage", zap.String("LSN", lsnFromStorage))
+					confirmedLSNFromDB = lsnFromStorage
+				} else {
+					stream.logger.Info("replication slot restart LSN not found in storage", zap.String("LSN", lsnFromStorage))
+				}
+			}
 		}
 	}
 
@@ -270,12 +282,28 @@ func (s *Stream) streamMessagesAsync() {
 					s.nextStandbyMessageDeadline = time.Time{}
 				}
 
+				if s.checkPointer != nil {
+					err = s.checkPointer.SetCheckpoint(pkm.ServerWALEnd.String(), s.slotName)
+					if err != nil {
+						s.logger.Error("failed to store checkpoint", zap.Error(err))
+					}
+				}
+
 			case pglogrepl.XLogDataByteID:
 				xld, err := pglogrepl.ParseXLogData(msg.Data[1:])
 				if err != nil {
 					s.logger.Fatal("parsing XLogData failed", zap.Error(err))
 				}
+
 				clientXLogPos := xld.WALStart + pglogrepl.LSN(len(xld.WALData))
+
+				if s.checkPointer != nil {
+					err = s.checkPointer.SetCheckpoint(clientXLogPos.String(), s.slotName)
+					if err != nil {
+						s.logger.Error("failed to store checkpoint", zap.Error(err))
+					}
+				}
+
 				s.changeFilter.FilterChange(clientXLogPos.String(), xld.WALData, func(change replication.Wal2JsonChanges) {
 					s.messages <- change
 				})
