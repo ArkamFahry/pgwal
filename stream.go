@@ -3,7 +3,6 @@ package pgstream
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"github.com/ArkamFahry/pgstream/internal/helpers"
 	"github.com/ArkamFahry/pgstream/internal/replication"
@@ -35,8 +34,8 @@ type Stream struct {
 	clientXLogPos              pglogrepl.LSN
 	standbyMessageTimeout      time.Duration
 	nextStandbyMessageDeadline time.Time
-	messages                   chan []byte
-	snapshotMessages           chan []byte
+	messages                   chan replication.Wal2JsonChanges
+	snapshotMessages           chan replication.Wal2JsonChanges
 	snapshotName               string
 	changeFilter               replication.ChangeFilter
 	lsnrestart                 pglogrepl.LSN
@@ -98,8 +97,8 @@ func NewStream(config Config, logger zap.Logger, checkPointer CheckPointer) (*St
 		pgConn:                     dbConn,
 		pgConfig:                   *cfg,
 		checkPointer:               checkPointer,
-		messages:                   make(chan []byte),
-		snapshotMessages:           make(chan []byte, 100),
+		messages:                   make(chan replication.Wal2JsonChanges),
+		snapshotMessages:           make(chan replication.Wal2JsonChanges, 100),
 		slotName:                   config.ReplicationSlotName,
 		schema:                     config.DatabaseSchema,
 		tableSchemas:               dataSchemas,
@@ -305,7 +304,7 @@ func (s *Stream) streamMessagesAsync() {
 					}
 				}
 
-				s.changeFilter.FilterChange(clientXLogPos.String(), xld.WALData, func(change []byte) {
+				s.changeFilter.FilterChange(clientXLogPos.String(), xld.WALData, func(change replication.Wal2JsonChanges) {
 					s.messages <- change
 				})
 			}
@@ -390,12 +389,7 @@ func (s *Stream) processSnapshot() {
 					},
 				}
 
-				snapshotMessage, err := json.Marshal(snapshotChanges)
-				if err != nil {
-					s.logger.Error("failed to marshal snapshot change", zap.Error(err))
-				}
-
-				s.snapshotMessages <- snapshotMessage
+				s.snapshotMessages <- snapshotChanges
 			}
 
 			snapshotRows.Close()
@@ -426,11 +420,11 @@ func (s *Stream) OnMessage(callback OnMessage) {
 	}
 }
 
-func (s *Stream) SnapshotMessageC() chan []byte {
+func (s *Stream) SnapshotMessageC() chan replication.Wal2JsonChanges {
 	return s.snapshotMessages
 }
 
-func (s *Stream) LrMessageC() chan []byte {
+func (s *Stream) LrMessageC() chan replication.Wal2JsonChanges {
 	return s.messages
 }
 
