@@ -1,4 +1,4 @@
-module github.com/ArkamFahry/pgstream
+module github.com/ArkamFahry/pgwal
 
 go 1.21.6
 

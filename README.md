@@ -1,4 +1,4 @@
-# pgstream
+# pgwal
 
 A simple to use postgresql package built to read the postgresql replication log
 
